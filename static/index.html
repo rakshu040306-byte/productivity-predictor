@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Screen-Time & Productivity Predictor</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .card {
+            background-color: #1e293b;
+            padding: 32px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+            width: 100%;
+            max-width: 460px;
+        }
+        h2 {
+            margin-top: 0;
+            color: #38bdf8;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 18px;
+        }
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 14px;
+            color: #cbd5e1;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #334155;
+            background-color: #0f172a;
+            color: #ffffff;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #0284c7;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #0369a1;
+        }
+        #result-box {
+            margin-top: 22px;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 18px;
+            display: none;
+        }
+        .productive {
+            background-color: #065f46;
+            color: #6ee7b7;
+            border: 1px solid #10b981;
+        }
+        .distracted {
+            background-color: #7f1d1d;
+            color: #fca5a5;
+            border: 1px solid #ef4444;
+        }
+        .chart-container {
+            margin-top: 24px;
+            background-color: #0f172a;
+            padding: 18px;
+            border-radius: 8px;
+            border: 1px solid #334155;
+            display: none;
+        }
+        .chart-title {
+            text-align: center;
+            font-size: 14px;
+            color: #94a3b8;
+            margin-bottom: 14px;
+            font-weight: bold;
+        }
+        .bar-group {
+            margin-bottom: 14px;
+        }
+        .bar-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            margin-bottom: 5px;
+            color: #cbd5e1;
+        }
+        .bar-bg {
+            width: 100%;
+            height: 20px;
+            background-color: #1e293b;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .bar-fill {
+            height: 100%;
+            width: 0%;
+            transition: width 0.6s ease;
+            border-radius: 6px;
+        }
+        #social-bar {
+            background-color: #ef4444;
+        }
+        #study-bar {
+            background-color: #10b981;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>AI Productivity Predictor</h2>
+    
+    <div class="form-group">
+        <label for="social">Social Media Usage (Minutes)</label>
+        <input type="number" id="social" placeholder="e.g., 30" min="0" required>
+    </div>
+
+    <div class="form-group">
+        <label for="study">Study / Coding App Usage (Minutes)</label>
+        <input type="number" id="study" placeholder="e.g., 60" min="0" required>
+    </div>
+
+    <div class="form-group">
+        <label for="hour">Hour of the Day (0 - 23)</label>
+        <input type="number" id="hour" placeholder="e.g., 14" min="0" max="23" required>
+    </div>
+
+    <button onclick="getPrediction()">Analyze My Focus</button>
+
+    <div id="result-box"></div>
+
+    <div class="chart-container" id="chart-box">
+        <div class="chart-title">Session Focus Breakdown</div>
+        
+        <div class="bar-group">
+            <div class="bar-label">
+                <span>Social Media</span>
+                <span id="social-text">0 mins (0%)</span>
+            </div>
+            <div class="bar-bg">
+                <div class="bar-fill" id="social-bar"></div>
+            </div>
+        </div>
+
+        <div class="bar-group" style="margin-bottom: 0;">
+            <div class="bar-label">
+                <span>Study / Coding</span>
+                <span id="study-text">0 mins (0%)</span>
+            </div>
+            <div class="bar-bg">
+                <div class="bar-fill" id="study-bar"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    async function getPrediction() {
+        const social = parseInt(document.getElementById("social").value);
+        const study = parseInt(document.getElementById("study").value);
+        const hour = parseInt(document.getElementById("hour").value);
+        const resultBox = document.getElementById("result-box");
+        const chartBox = document.getElementById("chart-box");
+
+        if (isNaN(social) || isNaN(study) || isNaN(hour)) {
+            alert("Please enter valid numbers in all fields.");
+            return;
+        }
+
+        const response = await fetch("/predict", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                social_media_mins: social,
+                study_app_mins: study,
+                hour_of_day: hour
+            })
+        });
+
+        const data = await response.json();
+        resultBox.style.display = "block";
+        resultBox.innerText = "AI Verdict: " + data.ai_prediction;
+
+        if (data.ai_prediction === "Productive") {
+            resultBox.className = "productive";
+        } else {
+            resultBox.className = "distracted";
+        }
+
+        const total = social + study;
+        const socialPct = total > 0 ? Math.round((social / total) * 100) : 0;
+        const studyPct = total > 0 ? Math.round((study / total) * 100) : 0;
+
+        chartBox.style.display = "block";
+        document.getElementById("social-text").innerText = `${social} mins (${socialPct}%)`;
+        document.getElementById("study-text").innerText = `${study} mins (${studyPct}%)`;
+
+        setTimeout(() => {
+            document.getElementById("social-bar").style.width = socialPct + "%";
+            document.getElementById("study-bar").style.width = studyPct + "%";
+        }, 50);
+    }
+</script>
+
+</body>
+</html>
